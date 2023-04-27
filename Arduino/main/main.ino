@@ -15,7 +15,7 @@
 #define USB_SERIAL Serial
 #define BT_SERIAL  Serial2
 
-#define ADDRE_TOF   0x52
+#define ADDRE_TOF  0x52
 
 const uint8_t DXL_CNT               = 18;
 const float   DXL_PROTOCOL_VERSION  = 1.0;
