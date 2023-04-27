@@ -1,0 +1,5 @@
+{
+    "board": "OpenRB-150:samd:OpenRB-150",
+    "sketch": "openrb_test.ino",
+    "port": "/dev/ttyACM0"
+}
