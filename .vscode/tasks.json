@@ -1,0 +1,23 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Run",
+        "command": "/opt/processing-4.1.3/processing-java",
+        "type": "process",
+        "args": [
+          "--force",
+          "--sketch=./Processing/main/",
+          "--run"
+        ],
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        },
+        "presentation": {
+          "reveal": "always",
+          "panel": "new"
+        }
+      }
+    ]
+  }

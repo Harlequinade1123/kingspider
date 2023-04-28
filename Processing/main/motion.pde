@@ -806,10 +806,11 @@ void calcIKAndSendCommand(ArrayList<float[][]> leg_translations, int[] initial_a
         command += "]\n";
         king_spider.writeCommand(command);
         myPort.write(command);
-        print(command);
+        //print(command);
         
         while (millis() - old_time < 50) {}
     }
+    delay(50);
 }
 
 boolean walking = false;

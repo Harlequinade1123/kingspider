@@ -179,12 +179,12 @@ void draw()
             king_spider.writeCommand("[v,100]\n");
             speed = 100;
         }
-        else if (key == 'w')
+        else if (key == 'h')
         {
-            myPort.write("[v,200]\n");
+            myPort.write("[h]\n");
             king_spider.writeCommand("[v,200]\n");
             speed = 200;
-            thread("walk");
+            //thread("walk");
         }
     }
 

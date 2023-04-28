@@ -197,7 +197,7 @@ void loop()
             g_dxl_present_velocity = 100;
             break;
         case 'h':
-            g_dxl_present_velocity = 500;
+            g_dxl_present_velocity = 200;
             break;
         case 'a':
             g_dxl_present_acceleration = g_cmd_buf[0];
