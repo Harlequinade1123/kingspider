@@ -4,12 +4,15 @@
 #if defined(ARDUINO_OpenCM904)
     #define DXL_SERIAL Serial3
     const int DXL_DIR_PIN = 22;
+    const bool SENSOR_IS_AVAILABLE = false;
 #elif defined(ARDUINO_OpenCR)
     #define DXL_SERIAL Serial3
     const int DXL_DIR_PIN = 84;
+    const bool SENSOR_IS_AVAILABLE = false;
 #elif defined(ARDUINO_OpenRB)
     #define DXL_SERIAL Serial1
     const int DXL_DIR_PIN = -1;
+    const bool SENSOR_IS_AVAILABLE = true;
 #endif
 
 #define USB_SERIAL Serial
@@ -81,7 +84,10 @@ uint16_t readToF()
 
 void setup()
 {
-    Wire.begin();
+    if (SENSOR_IS_AVAILABLE)
+    {
+        Wire.begin();
+    }
     USB_SERIAL.begin(USB_BUADRATE);
     BT_SERIAL.begin(BT_BUADRATE);
     while (!USB_SERIAL && !BT_SERIAL) {}
@@ -204,9 +210,12 @@ void loop()
             break;
         case 'd':
             {
-                uint16_t distance = readToF();
-                USB_SERIAL.println(distance);
-                BT_SERIAL.println(distance);
+                if (SENSOR_IS_AVAILABLE)
+                {
+                    uint16_t distance = readToF();
+                    USB_SERIAL.println(distance);
+                    BT_SERIAL.println(distance);
+                }
                 break;
             }
         case 'p':
