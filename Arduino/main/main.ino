@@ -1,13 +1,10 @@
 #include <Dynamixel2Arduino.h>
 #include <Wire.h>
 
+//使用するマイコン（OpenCM or OpenRB）の種類に応じて変更
 #if defined(ARDUINO_OpenCM904)
     #define DXL_SERIAL Serial3
     const int DXL_DIR_PIN = 22;
-    const bool SENSOR_IS_AVAILABLE = false;
-#elif defined(ARDUINO_OpenCR)
-    #define DXL_SERIAL Serial3
-    const int DXL_DIR_PIN = 84;
     const bool SENSOR_IS_AVAILABLE = false;
 #elif defined(ARDUINO_OpenRB)
     #define DXL_SERIAL Serial1
@@ -18,46 +15,54 @@
 #define USB_SERIAL Serial
 #define BT_SERIAL  Serial2
 
-#define ADDRE_TOF  0x52
+const uint8_t DXL_CNT               = 18;   // モータの数
+const float   DXL_PROTOCOL_VERSION  = 1.0;  // モータの通信プロトコル（AX->1.0, XC->2.0）
+const int32_t DXL_INIT_VELOCITY     = 100;  // モータの初期速度
+const int32_t DXL_INIT_ACCELERATION = 100;  // モータの初期加速度
+const unsigned long USB_BUADRATE = 57600;   // USBのボーレート
+const unsigned long BT_BUADRATE  = 57600;   // Bluetoothデバイスのボーレート
+const unsigned long DXL_BUADRATE = 1000000; // Dynamixelのボーレート
 
-const uint8_t DXL_CNT               = 18;
-const float   DXL_PROTOCOL_VERSION  = 1.0;
-const int32_t DXL_INIT_VELOCITY     = 100;
-const int32_t DXL_INIT_ACCELERATION = 100;
-const unsigned long USB_BUADRATE = 57600;
-const unsigned long BT_BUADRATE  = 57600;
-const unsigned long DXL_BUADRATE = 1000000;
+int32_t  g_dxl_present_velocity      = 100; // Dynamixelの速度
+int32_t  g_dxl_present_acceleration  = 100; // Dynamixelの加速度
+// Dynamixelの目標位置
+uint16_t g_dxl_pos[19]          = { 0, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512 };
+// Dynamixelが接続されているかどうか
+bool     g_dxl_is_connected[19] = { false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false };
+bool     g_torque_is_on = false; // Dynamixelがトルクオンかどうか
+String   g_read_line    = "";    // シリアル通信で受け取るコマンド
+char     g_cmd_word     = '\0';  // コマンドのキーワード
+uint16_t g_cmd_args[128];        // コマンドの引数
 
-int32_t  g_dxl_present_velocity      = 100;
-int32_t  g_dxl_present_acceleration  = 100;
-String   g_read_line = "";
-char     g_cmd_word  = '\0';
-uint16_t g_cmd_buf[255];
-uint16_t g_dxl_pos[19] = { 0, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512 };
-
-bool g_torque_is_on  = false;
-
+// Dynamixel2Arduinoクラスのインスタンス化
 Dynamixel2Arduino dxl(DXL_SERIAL, DXL_DIR_PIN);
 
 using namespace ControlTableItem;
 
-uint8_t readCommand()
+/**
+ * g_read_lineを読み込み，g_cmd_wordとg_cmd_argsに値を格納する
+ * @return g_cmd_argsの最大インデックス．何も格納されない場合は-1を返す
+ */
+int8_t readCommand()
 {
     int read_line_length = g_read_line.length();
     if (3 <= read_line_length && g_read_line.charAt(0) == '[' && g_read_line.charAt(read_line_length - 1) == ']')
     {
-        g_cmd_word          = g_read_line.charAt(1);
-        uint8_t buf_index   =-1;
-        int val_begin_index = 3;
-        int val_end_index   = 3;
+        g_cmd_word           = g_read_line.charAt(1);
+        int8_t arg_max_index   =-1;
+        int8_t elm_begin_index = 3;
+        int8_t elm_end_index   = 3;
+        
+        // カンマ区切りごとに数字を取り出す
+        // カンマ，数字以外が含まれていた場合，エラーとして扱い-1を返す
         for (int line_i = 3; line_i < read_line_length; line_i++)
         {
-            val_end_index++;
+            elm_end_index++;
             if (g_read_line.charAt(line_i) == ',' || line_i == read_line_length - 1)
             {
-                buf_index++;
-                g_cmd_buf[buf_index] = g_read_line.substring(val_begin_index, val_end_index).toInt();
-                val_begin_index = val_end_index;
+                arg_max_index++;
+                g_cmd_args[arg_max_index] = g_read_line.substring(elm_begin_index, elm_end_index).toInt();
+                elm_begin_index = elm_end_index;
             }
             else if (g_read_line.charAt(line_i) < '0' && '9' < g_read_line.charAt(line_i))
             {
@@ -65,29 +70,14 @@ uint8_t readCommand()
                 return -1;
             }
         }
-        return buf_index;
+        return arg_max_index;
     }
     g_cmd_word = '\0';
     return -1;
 }
 
-uint16_t readToF()
-{
-    Wire.beginTransmission(ADDRE_TOF);
-    Wire.write(0xD3);
-    Wire.endTransmission(false);
-    Wire.requestFrom(ADDRE_TOF, 2);
-    uint16_t dist = Wire.read();
-    dist = (dist << 8) | Wire.read();
-    return (dist);
-}
-
 void setup()
 {
-    if (SENSOR_IS_AVAILABLE)
-    {
-        Wire.begin();
-    }
     USB_SERIAL.begin(USB_BUADRATE);
     BT_SERIAL.begin(BT_BUADRATE);
     while (!USB_SERIAL && !BT_SERIAL) {}
@@ -95,32 +85,40 @@ void setup()
     dxl.begin(DXL_BUADRATE);
     dxl.setPortProtocolVersion(DXL_PROTOCOL_VERSION);
 
-    bool dxl_is_connected = false;
-    while (dxl_is_connected)
+    // 誤作動防止のためDynamixelが一つ以上認識されるまで待機する
+    uint8_t dxl_id = 1;
+    while (!dxl.ping(dxl_id))
     {
-        dxl_is_connected = dxl.ping(1);
-        for (int dxl_i = 2; dxl_i <= DXL_CNT; dxl_i++)
+        dxl_id++;
+        dxl_id %= DXL_CNT + 1;
+        delay(5);
+    }
+    delay(100);
+
+    // 接続されているDynamixelを確認する
+    for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
+    {
+        if (dxl.ping(dxl_i))
         {
-            bool ping = dxl.ping(dxl_i);
-            dxl_is_connected = dxl_is_connected && ping;
-            if (USB_SERIAL)
-            {
-                USB_SERIAL.print(dxl_i);
-                USB_SERIAL.print("->");
-                if (ping)
-                {
-                    USB_SERIAL.println("connected");
-                }
-                else
-                {
-                    USB_SERIAL.println("failed");
-                }
-            }
+            g_dxl_is_connected[dxl_i] = true;
+        }
+        else
+        {
+            g_dxl_is_connected[dxl_i] = false;
         }
     }
 
+    // 接続されたDynamixelに対して初期設定を行い現在角度の表示する
+    if (USB_SERIAL)
+    {
+        USB_SERIAL.println("\n----- DXL_DEFAULT_POSITION_VALUE ------");
+    }
     for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
     {
+        if (!g_dxl_is_connected[dxl_i])
+        {
+            continue;
+        }
         dxl.torqueOff(dxl_i);
         dxl.setOperatingMode(dxl_i, OP_POSITION);
         dxl.torqueOn(dxl_i);
@@ -133,38 +131,69 @@ void setup()
         {
             dxl.writeControlTableItem(MOVING_SPEED, dxl_i, DXL_INIT_VELOCITY);
         }
-        g_dxl_pos[dxl_i] = int(dxl.getPresentPosition(dxl_i));
+        g_dxl_pos[dxl_i] = uint16_t(dxl.getPresentPosition(dxl_i));
+        if (USB_SERIAL)
+        {
+            USB_SERIAL.print("[ID:");
+            USB_SERIAL.print(dxl_i);
+            USB_SERIAL.print(" Pos:");
+            USB_SERIAL.print(g_dxl_pos[dxl_i]);
+            USB_SERIAL.println("]");
+        }
     }
     g_torque_is_on = true;
+    if (USB_SERIAL)
+    {
+        USB_SERIAL.println("---------------------------------------");
+    }
 }
 
 void loop()
 {
-    uint8_t buf_index = -1;
+    // シリアル通信によりコマンドの取得を行う
+    int8_t arg_max_index = -1;
     if (0 < USB_SERIAL.available())
     {
-        g_read_line = USB_SERIAL.readStringUntil('\n');
-        buf_index   = readCommand();
+        g_read_line   = USB_SERIAL.readStringUntil('\n');
+        arg_max_index = readCommand();
     }
     else if (0 < BT_SERIAL.available())
     {
-        g_read_line = BT_SERIAL.readStringUntil('\n');
-        buf_index   = readCommand();
+        g_read_line   = BT_SERIAL.readStringUntil('\n');
+        arg_max_index = readCommand();
     }
+
+    /**
+     * 取得したコマンドによって以下の操作を行う
+     * [s,ID,POS] -> 指定したモータ1つの位置制御
+     * [m,ID1,POS1,ID2,POS2,...] -> 指定したモータ複数の位置制御
+     * [i] -> 初期姿勢にする
+     * [e] -> 片付けの姿勢にする
+     * [f] -> トルクオフ
+     * [n] -> トルクオン
+     * [c] -> モータの速度の設定値を30にする
+     * [v] -> モータの速度の設定値を60にする
+     * [b] -> モータの速度の設定値を100にする
+     * 以下は追加コマンド
+     * [a,POS1,POS2,...] -> 全てのモータの位置制御（初期型のmコマンド）
+     * [x] -> モータの速度の設定値を任意の値にする
+     * [z] -> モータの加速度の設定値を任意の値にする
+     * [p] -> モータの現在位置を取得する
+     */
     switch (g_cmd_word)
     {
         case 's':
-            if (1 <= buf_index)
+            if (1 <= arg_max_index)
             {
-                g_dxl_pos[g_cmd_buf[0]] = g_cmd_buf[1];
+                g_dxl_pos[g_cmd_args[0]] = g_cmd_args[1];
             }
             break;
         case 'm':
-            for (int buf_i = 0; buf_i < buf_index; buf_i+=2)
+            for (int arg_i = 0; arg_i < arg_max_index; arg_i+=2)
             {
-                if (0 < buf_i <= DXL_CNT)
+                if (0 < arg_i <= DXL_CNT)
                 {
-                    g_dxl_pos[g_cmd_buf[buf_i]] = g_cmd_buf[buf_i + 1];
+                    g_dxl_pos[g_cmd_args[arg_i]] = g_cmd_args[arg_i + 1];
                 }
             }
             break;
@@ -182,6 +211,10 @@ void loop()
         case 'f':
             for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
             {
+                if (!g_dxl_is_connected[dxl_i])
+                {
+                    continue;
+                }
                 dxl.torqueOff(dxl_i);
                 g_torque_is_on = false;
             }
@@ -189,6 +222,10 @@ void loop()
         case 'n':
             for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
             {
+                if (!g_dxl_is_connected[dxl_i])
+                {
+                    continue;
+                }
                 dxl.torqueOn(dxl_i);
                 g_torque_is_on = true;
             }
@@ -202,43 +239,56 @@ void loop()
         case 'b':
             g_dxl_present_velocity = 100;
             break;
-        case 'h':
-            g_dxl_present_velocity = 200;
-            break;
         case 'a':
-            g_dxl_present_acceleration = g_cmd_buf[0];
-            break;
-        case 'd':
+            for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
             {
-                if (SENSOR_IS_AVAILABLE)
+                if (0 < dxl_i <= DXL_CNT)
                 {
-                    uint16_t distance = readToF();
-                    USB_SERIAL.println(distance);
-                    BT_SERIAL.println(distance);
+                    g_dxl_pos[dxl_i] = g_cmd_args[dxl_i - 1];
                 }
-                break;
             }
+        case 'x':
+            g_dxl_present_velocity = g_cmd_args[0];
+            break;
+        case 'z':
+            g_dxl_present_acceleration = g_cmd_args[0];
+            break;
         case 'p':
             {
-                String dxl_pos_msg = "[";
-                for (int dxl_i = 1; dxl_i < DXL_CNT; dxl_i++)
+                String dxl_pos_msg = "[ ";
+                for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
                 {
-                    dxl_pos_msg += String(int(dxl.getPresentPosition(dxl_i)));
-                    dxl_pos_msg += ",";
+                    if (!g_dxl_is_connected[dxl_i])
+                    {
+                        continue;
+                    }
+                    dxl_pos_msg += "ID";
+                    dxl_pos_msg += String(dxl_i);
+                    dxl_pos_msg += "->";
+                    dxl_pos_msg += String(uint16_t(dxl.getPresentPosition(dxl_i)));
+                    dxl_pos_msg += " ";
                 }
-                dxl_pos_msg += String(int(dxl.getPresentPosition(DXL_CNT)));
                 dxl_pos_msg += "]";
                 USB_SERIAL.println(dxl_pos_msg);
                 BT_SERIAL.println(dxl_pos_msg);
+                USB_SERIAL.flush();
+                BT_SERIAL.flush();
                 break;
             }
         default:
             break;
     }
+
+    // トルクオン -> 接続されているDynamixelに対して速度（加速度），目標位置の入力
+    // トルクオフ -> 現在位置を読み込み，g_dxl_posを更新（トルクオン時に突然動き出すことを防止するため）
     if (g_torque_is_on)
     {
         for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
         {
+            if (!g_dxl_is_connected[dxl_i])
+            {
+                continue;
+            }
             if (1.5 <= DXL_PROTOCOL_VERSION)
             {
                 dxl.writeControlTableItem(PROFILE_VELOCITY, dxl_i, g_dxl_present_velocity);
@@ -251,6 +301,10 @@ void loop()
         }
         for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
         {
+            if (!g_dxl_is_connected[dxl_i])
+            {
+                continue;
+            }
             dxl.setGoalPosition(dxl_i, g_dxl_pos[dxl_i]);
         }
     }
@@ -258,7 +312,11 @@ void loop()
     {
         for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
         {
-            g_dxl_pos[dxl_i] = int(dxl.getPresentPosition(dxl_i));
+            if (!g_dxl_is_connected[dxl_i])
+            {
+                continue;
+            }
+            g_dxl_pos[dxl_i] = uint16_t(dxl.getPresentPosition(dxl_i));
         }
     }
     g_cmd_word = '\0';

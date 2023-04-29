@@ -1,6 +1,6 @@
 {
     "board": "OpenCM904:OpenCM904:OpenCM904",
     "sketch": "Arduino/main/main.ino",
-    "configuration": "upload_method=UploadMethod",
-    "port": "/dev/ttyACM0"
+    "port": "/dev/ttyACM0",
+    "configuration": "upload_method=UploadMethod"
 }
