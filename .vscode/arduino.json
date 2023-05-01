@@ -1,6 +1,5 @@
 {
-    "board": "OpenCM904:OpenCM904:OpenCM904",
+    "board": "OpenRB-150:samd:OpenRB-150",
     "sketch": "Arduino/main/main.ino",
-    "port": "/dev/ttyACM0",
-    "configuration": "upload_method=UploadMethod"
+    "port": "/dev/ttyACM0"
 }

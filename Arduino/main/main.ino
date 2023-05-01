@@ -1,5 +1,4 @@
 #include <Dynamixel2Arduino.h>
-#include <Wire.h>
 
 //使用するマイコン（OpenCM or OpenRB）の種類に応じて変更
 #if defined(ARDUINO_OpenCM904)
@@ -81,6 +80,7 @@ void setup()
     USB_SERIAL.begin(USB_BUADRATE);
     BT_SERIAL.begin(BT_BUADRATE);
     while (!USB_SERIAL && !BT_SERIAL) {}
+    delay(2000);
 
     dxl.begin(DXL_BUADRATE);
     dxl.setPortProtocolVersion(DXL_PROTOCOL_VERSION);
@@ -111,7 +111,7 @@ void setup()
     // 接続されたDynamixelに対して初期設定を行い現在角度の表示する
     if (USB_SERIAL)
     {
-        USB_SERIAL.println("\n----- DXL_DEFAULT_POSITION_VALUE ------");
+        USB_SERIAL.println("----- DXL_DEFAULT_POSITION_VALUE ------");
     }
     for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
     {
