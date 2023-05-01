@@ -14,16 +14,18 @@
 #define USB_SERIAL Serial
 #define BT_SERIAL  Serial2
 
-const uint8_t DXL_CNT               = 18;   // モータの数
-const float   DXL_PROTOCOL_VERSION  = 1.0;  // モータの通信プロトコル（AX->1.0, XC->2.0）
-const int32_t DXL_INIT_VELOCITY     = 100;  // モータの初期速度
-const int32_t DXL_INIT_ACCELERATION = 100;  // モータの初期加速度
+const uint8_t  DXL_CNT                = 18;  // モータの数
+const float    DXL_PROTOCOL_VERSION   = 1.0; // モータの通信プロトコル（AX->1.0, XC->2.0）
+const uint16_t DXL_INIT_VELOCITY      = 100; // モータの初期速度
+const uint16_t DXL_INIT_ACCELERATION  = 100; // モータの初期加速度
+const uint16_t DXL_MAX_POSITION_VALUE = 850; // モータの最大角
+const uint16_t DXL_MIN_POSITION_VALUE = 150; // モータの最小角
 const unsigned long USB_BUADRATE = 57600;   // USBのボーレート
 const unsigned long BT_BUADRATE  = 57600;   // Bluetoothデバイスのボーレート
 const unsigned long DXL_BUADRATE = 1000000; // Dynamixelのボーレート
 
-int32_t  g_dxl_present_velocity      = 100; // Dynamixelの速度
-int32_t  g_dxl_present_acceleration  = 100; // Dynamixelの加速度
+uint16_t g_dxl_present_velocity      = 100; // Dynamixelの速度
+uint16_t g_dxl_present_acceleration  = 100; // Dynamixelの加速度
 // Dynamixelの目標位置
 uint16_t g_dxl_pos[19]          = { 0, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512 };
 // Dynamixelが接続されているかどうか
@@ -131,7 +133,8 @@ void setup()
         {
             dxl.writeControlTableItem(MOVING_SPEED, dxl_i, DXL_INIT_VELOCITY);
         }
-        g_dxl_pos[dxl_i] = uint16_t(dxl.getPresentPosition(dxl_i));
+
+        g_dxl_pos[dxl_i] = constrain(uint16_t(dxl.getPresentPosition(dxl_i)), DXL_MIN_POSITION_VALUE, DXL_MAX_POSITION_VALUE);
         if (USB_SERIAL)
         {
             USB_SERIAL.print("[ID:");
@@ -185,7 +188,7 @@ void loop()
         case 's':
             if (1 <= arg_max_index)
             {
-                g_dxl_pos[g_cmd_args[0]] = g_cmd_args[1];
+                g_dxl_pos[g_cmd_args[0]] = constrain(g_cmd_args[1], DXL_MIN_POSITION_VALUE, DXL_MAX_POSITION_VALUE);
             }
             break;
         case 'm':
@@ -193,7 +196,7 @@ void loop()
             {
                 if (0 < arg_i <= DXL_CNT)
                 {
-                    g_dxl_pos[g_cmd_args[arg_i]] = g_cmd_args[arg_i + 1];
+                    g_dxl_pos[g_cmd_args[arg_i]] = constrain(g_cmd_args[arg_i + 1], DXL_MIN_POSITION_VALUE, DXL_MAX_POSITION_VALUE);
                 }
             }
             break;
@@ -251,7 +254,7 @@ void loop()
             {
                 if (0 < dxl_i <= DXL_CNT)
                 {
-                    g_dxl_pos[dxl_i] = g_cmd_args[dxl_i - 1];
+                    g_dxl_pos[dxl_i] = constrain(g_cmd_args[dxl_i - 1], DXL_MIN_POSITION_VALUE, DXL_MAX_POSITION_VALUE);
                 }
             }
         case 'k':
@@ -323,7 +326,7 @@ void loop()
             {
                 continue;
             }
-            g_dxl_pos[dxl_i] = uint16_t(dxl.getPresentPosition(dxl_i));
+            g_dxl_pos[dxl_i] = constrain(uint16_t(dxl.getPresentPosition(dxl_i)), DXL_MIN_POSITION_VALUE, DXL_MAX_POSITION_VALUE);
         }
     }
     g_cmd_word = '\0';
