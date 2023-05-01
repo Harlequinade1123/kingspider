@@ -176,8 +176,8 @@ void loop()
      * [b] -> モータの速度の設定値を100にする
      * 以下は追加コマンド
      * [a,POS1,POS2,...] -> 全てのモータの位置制御（初期型のmコマンド）
-     * [x] -> モータの速度の設定値を任意の値にする
-     * [z] -> モータの加速度の設定値を任意の値にする
+     * [v,VEL] -> モータの速度の設定値をVELにする
+     * [k,ACC] -> モータの加速度の設定値をACCにする
      * [p] -> モータの現在位置を取得する
      */
     switch (g_cmd_word)
@@ -234,7 +234,14 @@ void loop()
             g_dxl_present_velocity = 30;
             break;
         case 'v':
-            g_dxl_present_velocity = 60;
+            if (0 <= arg_max_index)
+            {
+                g_dxl_present_velocity = g_cmd_args[0];
+            }
+            else
+            {
+                g_dxl_present_velocity = 60;
+            }
             break;
         case 'b':
             g_dxl_present_velocity = 100;
@@ -247,11 +254,11 @@ void loop()
                     g_dxl_pos[dxl_i] = g_cmd_args[dxl_i - 1];
                 }
             }
-        case 'x':
-            g_dxl_present_velocity = g_cmd_args[0];
-            break;
-        case 'z':
-            g_dxl_present_acceleration = g_cmd_args[0];
+        case 'k':
+            if (0 <= arg_max_index)
+            {
+                g_dxl_present_acceleration = g_cmd_args[0];
+            }
             break;
         case 'p':
             {
