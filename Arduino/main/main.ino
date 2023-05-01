@@ -185,13 +185,13 @@ void loop()
      */
     switch (g_cmd_word)
     {
-        case 's':
+        case 's': // g_cmd_args -> { ID, POS }
             if (1 <= arg_max_index)
             {
                 g_dxl_pos[g_cmd_args[0]] = constrain(g_cmd_args[1], DXL_MIN_POSITION_VALUE, DXL_MAX_POSITION_VALUE);
             }
             break;
-        case 'm':
+        case 'm': // g_cmd_args -> { ID1, POS1, ID2, POS2, ... }
             for (int arg_i = 0; arg_i < arg_max_index; arg_i+=2)
             {
                 if (0 < arg_i <= DXL_CNT)
@@ -200,18 +200,18 @@ void loop()
                 }
             }
             break;
-        case 'i':
+        case 'i': // g_cmd_args -> { }
             for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
             {
                 g_dxl_pos[dxl_i] = 512;
             }
             break;
-        case 'e':
+        case 'e': // g_cmd_args -> { }
             g_dxl_pos[1]  = 512; g_dxl_pos[2]  = 512; g_dxl_pos[3]  = 819; g_dxl_pos[4]  = 205; g_dxl_pos[5]  = 512; g_dxl_pos[6]  = 512;
             g_dxl_pos[7]  = 512; g_dxl_pos[8]  = 512; g_dxl_pos[9]  = 205; g_dxl_pos[10] = 819; g_dxl_pos[11] = 512; g_dxl_pos[12] = 512;
             g_dxl_pos[13] = 512; g_dxl_pos[14] = 512; g_dxl_pos[15] = 205; g_dxl_pos[16] = 819; g_dxl_pos[17] = 512; g_dxl_pos[18] = 512;
             break;
-        case 'f':
+        case 'f': // g_cmd_args -> { }
             for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
             {
                 if (!g_dxl_is_connected[dxl_i])
@@ -222,7 +222,7 @@ void loop()
                 g_torque_is_on = false;
             }
             break;
-        case 'n':
+        case 'n': // g_cmd_args -> { }
             for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
             {
                 if (!g_dxl_is_connected[dxl_i])
@@ -233,10 +233,10 @@ void loop()
                 g_torque_is_on = true;
             }
             break;
-        case 'c':
+        case 'c': // g_cmd_args -> { }
             g_dxl_present_velocity = 30;
             break;
-        case 'v':
+        case 'v': // g_cmd_args -> { VEL } or { }
             if (0 <= arg_max_index)
             {
                 g_dxl_present_velocity = g_cmd_args[0];
@@ -246,10 +246,10 @@ void loop()
                 g_dxl_present_velocity = 60;
             }
             break;
-        case 'b':
+        case 'b': // g_cmd_args -> { }
             g_dxl_present_velocity = 100;
             break;
-        case 'a':
+        case 'a': // g_cmd_args -> { POS1, POS2, ..., POS_DXL_CENT }
             for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
             {
                 if (0 < dxl_i <= DXL_CNT)
@@ -257,13 +257,13 @@ void loop()
                     g_dxl_pos[dxl_i] = constrain(g_cmd_args[dxl_i - 1], DXL_MIN_POSITION_VALUE, DXL_MAX_POSITION_VALUE);
                 }
             }
-        case 'k':
+        case 'k': // g_cmd_args -> { ACC } 
             if (0 <= arg_max_index)
             {
                 g_dxl_present_acceleration = g_cmd_args[0];
             }
             break;
-        case 'p':
+        case 'p': // g_cmd_args -> { }
             {
                 String dxl_pos_msg = "[ ";
                 for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
