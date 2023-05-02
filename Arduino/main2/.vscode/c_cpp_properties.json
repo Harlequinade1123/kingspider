@@ -26,6 +26,7 @@
                 "/home/ntlab/.arduino15/packages/OpenRB-150/hardware/samd/0.2.1/cores/arduino",
                 "/home/ntlab/.arduino15/packages/OpenRB-150/hardware/samd/0.2.1/variants/OpenRB-150",
                 "/home/ntlab/Arduino/libraries/Dynamixel2Arduino/src",
+                "/home/ntlab/.arduino15/packages/OpenRB-150/hardware/samd/0.2.1/libraries/Wire",
                 "/home/ntlab/.arduino15/packages/arduino/tools/arm-none-eabi-gcc/7-2017q4/arm-none-eabi/include/c++/7.2.1",
                 "/home/ntlab/.arduino15/packages/arduino/tools/arm-none-eabi-gcc/7-2017q4/arm-none-eabi/include/c++/7.2.1/arm-none-eabi",
                 "/home/ntlab/.arduino15/packages/arduino/tools/arm-none-eabi-gcc/7-2017q4/arm-none-eabi/include/c++/7.2.1/backward",

@@ -543,7 +543,7 @@ void posture6_2()
         king_spider.writeCommand(command);
         println(command);
         
-        while (millis() - old_time < 25) {}
+        while (millis() - old_time < 50) {}
     }
 }
 
@@ -792,23 +792,30 @@ void calcIKAndSendCommand(ArrayList<float[][]> leg_translations, int[] initial_a
             }
         }
 
-        String command = "[m,";
+        String command_sim = "[m,";
+        String command = "[a,";
         for (int joint_i = 0; joint_i < 18; joint_i++)
         {
-            command += str(joint_i + 1);
-            command += ",";
+            command_sim += str(joint_i + 1);
+            command_sim += ",";
             command += str(joint_angle_values[joint_i]);
+            command_sim += str(joint_angle_values[joint_i]);
             if (joint_i != 17)
             {
                 command += ",";
+                command_sim += ",";
             }
         }
         command += "]\n";
-        king_spider.writeCommand(command);
+        command_sim += "]\n";
+        king_spider.writeCommand(command_sim);
         myPort.write(command);
         //print(command);
         
-        while (millis() - old_time < 50) {}
+        if (list_i < joint_angles_list_size - 1)
+        {
+            while (millis() - old_time < 50) {}
+        }
     }
     delay(50);
 }
@@ -947,6 +954,11 @@ void planMotion()
     running = false;
 }
 
+int g_division_number = 5;
+float g_leg_up   = 25.0;
+float g_leg_down = 10.0;
+float g_leg_forward = 15.0;
+
 void initialize()
 {
     int[] initial_angle_values = new int[]{512,512,512,512,512,512,512,512,512,512,512,512,512,512,512,512,512,512};
@@ -954,7 +966,7 @@ void initialize()
     leg_translations_list.add(new float[][]{
         {-10.0, -50.0, 30.0}, {-10.0, 50.0, 30.0}, {0.0, 0.0, 30.0}, {10.0, 50.0, 30.0}, {20.0, -50.0, 30.0}, {0.0, 0.0, 30.0}
     });
-    calcIKAndSendCommand(leg_translations_list, initial_angle_values, 5);
+    calcIKAndSendCommand(leg_translations_list, initial_angle_values, g_division_number);
 }
 
 void walkstart()
@@ -963,12 +975,12 @@ void walkstart()
     int[] initial_angle_values = new int[]{338,685,321,702,332,691,512,512,703,320,697,326,700,338,707,321,734,332};
     ArrayList<float[][]> leg_translations_list = new ArrayList<float[][]>();
     leg_translations_list.add(new float[][]{
-        {15.0, 0.0, 20.0}, {-15.0, 0.0, -10.0}, {15.0, 0.0, 20.0}, {-15.0, 0.0, -10.0}, {15.0, 0.0, 20.0}, {-15.0, 0.0, -10.0}
+        {g_leg_forward, 0.0, g_leg_up}, {-g_leg_forward, 0.0, -g_leg_down}, {g_leg_forward, 0.0, g_leg_up}, {-g_leg_forward, 0.0, -g_leg_down}, {g_leg_forward, 0.0, g_leg_up}, {-g_leg_forward, 0.0, -g_leg_down}
     });
     leg_translations_list.add(new float[][]{
-        {15.0, 0.0, -20.0}, {-15.0, 0.0, 10.0}, {15.0, 0.0, -20.0}, {-15.0, 0.0, 10.0}, {15.0, 0.0, -20.0}, {-15.0, 0.0, 10.0}
+        {g_leg_forward, 0.0, -g_leg_up}, {-g_leg_forward, 0.0, g_leg_down}, {g_leg_forward, 0.0, -g_leg_up}, {-g_leg_forward, 0.0, g_leg_down}, {g_leg_forward, 0.0, -g_leg_up}, {-g_leg_forward, 0.0, g_leg_down}
     });
-    calcIKAndSendCommand(leg_translations_list, initial_angle_values, 5);
+    calcIKAndSendCommand(leg_translations_list, initial_angle_values, g_division_number);
 }
 
 void walkRight()
@@ -977,12 +989,12 @@ void walkRight()
     int[] initial_angle_values = new int[]{280,649,321,651,220,524,610,610,699,322,677,344,659,280,674,321,586,220};
     ArrayList<float[][]> leg_translations_list = new ArrayList<float[][]>();
     leg_translations_list.add(new float[][]{
-        {30.0, 0.0, 20.0}, {-30.0, 0.0, -10.0}, {30.0, 0.0, 20.0}, {-30.0, 0.0, -10.0}, {30.0, 0.0, 20.0}, {-30.0, 0.0, -10.0}
+        {g_leg_forward * 2, 0.0, g_leg_up}, {-g_leg_forward * 2, 0.0, -g_leg_down}, {g_leg_forward * 2, 0.0, g_leg_up}, {-g_leg_forward * 2, 0.0, -g_leg_down}, {g_leg_forward * 2, 0.0, g_leg_up}, {-g_leg_forward * 2, 0.0, -g_leg_down}
     });
     leg_translations_list.add(new float[][]{
-        {30.0, 0.0, -20.0}, {-30.0, 0.0, 10.0}, {30.0, 0.0, -20.0}, {-30.0, 0.0, 10.0}, {30.0, 0.0, -20.0}, {-30.0, 0.0, 10.0}
+        {g_leg_forward * 2, 0.0, -g_leg_up}, {-g_leg_forward * 2, 0.0, g_leg_down}, {g_leg_forward * 2, 0.0, -g_leg_up}, {-g_leg_forward * 2, 0.0, g_leg_down}, {g_leg_forward * 2, 0.0, -g_leg_up}, {-g_leg_forward * 2, 0.0, g_leg_down}
     });
-    calcIKAndSendCommand(leg_translations_list, initial_angle_values, 5);
+    calcIKAndSendCommand(leg_translations_list, initial_angle_values, g_division_number);
 }
 
 void walkLeft()
@@ -991,12 +1003,12 @@ void walkLeft()
     int[] initial_angle_values = new int[]{372,740,370,700,497,802,412,412,699,323,677,345,766,372,689,370,828,497};
     ArrayList<float[][]> leg_translations_list = new ArrayList<float[][]>();
     leg_translations_list.add(new float[][]{
-        {-30.0, 0.0, -10.0}, {30.0, 0.0, 20.0}, {-30.0, 0.0, -10.0}, {30.0, 0.0, 20.0}, {-30.0, 0.0, -10.0}, {30.0, 0.0, 20.0}
+        {-g_leg_forward * 2, 0.0, -g_leg_down}, {g_leg_forward * 2, 0.0, g_leg_up}, {-g_leg_forward * 2, 0.0, -g_leg_down}, {g_leg_forward * 2, 0.0, g_leg_up}, {-g_leg_forward * 2, 0.0, -g_leg_down}, {g_leg_forward * 2, 0.0, g_leg_up}
     });
     leg_translations_list.add(new float[][]{
-        {-30.0, 0.0, 10.0}, {30.0, 0.0, -20.0}, {-30.0, 0.0, 10.0}, {30.0, 0.0, -20.0}, {-30.0, 0.0, 10.0}, {30.0, 0.0, -20.0}
+        {-g_leg_forward * 2, 0.0, g_leg_down}, {g_leg_forward * 2, 0.0, -g_leg_up}, {-g_leg_forward * 2, 0.0, g_leg_down}, {g_leg_forward * 2, 0.0, -g_leg_up}, {-g_leg_forward * 2, 0.0, g_leg_down}, {g_leg_forward * 2, 0.0, -g_leg_up}
     });
-    calcIKAndSendCommand(leg_translations_list, initial_angle_values, 5);
+    calcIKAndSendCommand(leg_translations_list, initial_angle_values, g_division_number);
 }
 
 void walkEndRight()
@@ -1005,12 +1017,12 @@ void walkEndRight()
     int[] initial_angle_values = new int[]{280,649,321,651,220,524,610,610,699,322,677,344,659,280,674,321,586,220};
     ArrayList<float[][]> leg_translations_list = new ArrayList<float[][]>();
     leg_translations_list.add(new float[][]{
-        {15.0, 0.0, 20.0}, {-15.0, 0.0, -10.0}, {15.0, 0.0, 20.0}, {-15.0, 0.0, -10.0}, {15.0, 0.0, 20.0}, {-15.0, 0.0, -10.0}
+        {g_leg_forward, 0.0, g_leg_up}, {-g_leg_forward, 0.0, -g_leg_down}, {g_leg_forward, 0.0, g_leg_up}, {-g_leg_forward, 0.0, -g_leg_down}, {g_leg_forward, 0.0, g_leg_up}, {-g_leg_forward, 0.0, -g_leg_down}
     });
     leg_translations_list.add(new float[][]{
-        {15.0, 0.0, -20.0}, {-15.0, 0.0, 10.0}, {15.0, 0.0, -20.0}, {-15.0, 0.0, 10.0}, {15.0, 0.0, -20.0}, {-15.0, 0.0, 10.0}
+        {g_leg_forward, 0.0, -g_leg_up}, {-g_leg_forward, 0.0, g_leg_down}, {g_leg_forward, 0.0, -g_leg_up}, {-g_leg_forward, 0.0, g_leg_down}, {g_leg_forward, 0.0, -g_leg_up}, {-g_leg_forward, 0.0, g_leg_down}
     });
-    calcIKAndSendCommand(leg_translations_list, initial_angle_values, 5);
+    calcIKAndSendCommand(leg_translations_list, initial_angle_values, g_division_number);
 }
 
 void walkEndLeft()
@@ -1019,19 +1031,19 @@ void walkEndLeft()
     int[] initial_angle_values = new int[]{372,740,370,700,497,802,412,412,699,323,677,345,766,372,689,370,828,497};
     ArrayList<float[][]> leg_translations_list = new ArrayList<float[][]>();
     leg_translations_list.add(new float[][]{
-        {-15.0, 0.0, -10.0}, {15.0, 0.0, 20.0}, {-15.0, 0.0, -10.0}, {15.0, 0.0, 20.0}, {-15.0, 0.0, -10.0}, {15.0, 0.0, 20.0}
+        {-g_leg_forward, 0.0, -g_leg_down}, {g_leg_forward, 0.0, g_leg_up}, {-g_leg_forward, 0.0, -g_leg_down}, {g_leg_forward, 0.0, g_leg_up}, {-g_leg_forward, 0.0, -g_leg_down}, {g_leg_forward, 0.0, g_leg_up}
     });
     leg_translations_list.add(new float[][]{
-        {-15.0, 0.0, 10.0}, {15.0, 0.0, -20.0}, {-15.0, 0.0, 10.0}, {15.0, 0.0, -20.0}, {-15.0, 0.0, 10.0}, {15.0, 0.0, -20.0}
+        {-g_leg_forward, 0.0, g_leg_down}, {g_leg_forward, 0.0, -g_leg_up}, {-g_leg_forward, 0.0, g_leg_down}, {g_leg_forward, 0.0, -g_leg_up}, {-g_leg_forward, 0.0, g_leg_down}, {g_leg_forward, 0.0, -g_leg_up}
     });
-    calcIKAndSendCommand(leg_translations_list, initial_angle_values, 5);
+    calcIKAndSendCommand(leg_translations_list, initial_angle_values, g_division_number);
 }
 
 void turnRight()
 {
     //初期姿勢
     int[] initial_angle_values = new int[]{338,685,321,702,332,691,512,512,703,320,697,326,700,338,707,321,734,332};
-    float division_number = 5.0;
+    float division_number = g_division_number;
     ArrayList<float[][]> leg_translations_list = new ArrayList<float[][]>();
     for (int i = 1; i <= int(division_number); i++)
     {
@@ -1096,7 +1108,7 @@ void turnLeft()
 {
     //初期姿勢
     int[] initial_angle_values = new int[]{338,685,321,702,332,691,512,512,703,320,697,326,700,338,707,321,734,332};
-    float division_number = 5.0;
+    float division_number = g_division_number;
     ArrayList<float[][]> leg_translations_list = new ArrayList<float[][]>();
     for (int i = 1; i <= int(division_number); i++)
     {
@@ -1169,7 +1181,7 @@ void perform()
     leg_translations_list.add(new float[][]{
         {0.0, 0.0,-delta}, {0.0, 0.0,-delta}, {0.0, 0.0,-delta}, {0.0, 0.0,-delta}, {0.0, 0.0,-delta}, {0.0, 0.0,-delta}
     });
-    calcIKAndSendCommand(leg_translations_list, initial_angle_values, 5);
+    calcIKAndSendCommand(leg_translations_list, initial_angle_values, g_division_number);
 }
 
 float[][] leg_lengths = new float[6][4];

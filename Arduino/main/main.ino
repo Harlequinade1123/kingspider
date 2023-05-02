@@ -200,7 +200,7 @@ void loop()
                 }
             }
             break;
-        case 'i': // g_cmd_args -> { }
+        case 'i': // g_cmd_args -> { } 
             for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
             {
                 g_dxl_pos[dxl_i] = 512;
