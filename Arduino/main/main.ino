@@ -18,8 +18,8 @@ const uint8_t  DXL_CNT                = 18;  // モータの数
 const float    DXL_PROTOCOL_VERSION   = 1.0; // モータの通信プロトコル（AX->1.0, XC->2.0）
 const uint16_t DXL_INIT_VELOCITY      = 100; // モータの初期速度
 const uint16_t DXL_INIT_ACCELERATION  = 100; // モータの初期加速度
-const uint16_t DXL_MAX_POSITION_VALUE = 850; // モータの最大角
-const uint16_t DXL_MIN_POSITION_VALUE = 150; // モータの最小角
+const uint16_t DXL_MAX_POSITION_VALUE = 850; // モータの最大値
+const uint16_t DXL_MIN_POSITION_VALUE = 150; // モータの最小値
 const unsigned long USB_BUADRATE = 57600;   // USBのボーレート
 const unsigned long BT_BUADRATE  = 57600;   // Bluetoothデバイスのボーレート
 const unsigned long DXL_BUADRATE = 1000000; // Dynamixelのボーレート
@@ -257,7 +257,7 @@ void loop()
                     g_dxl_pos[dxl_i] = constrain(g_cmd_args[dxl_i - 1], DXL_MIN_POSITION_VALUE, DXL_MAX_POSITION_VALUE);
                 }
             }
-        case 'k': // g_cmd_args -> { ACC } 
+        case 'k': // g_cmd_args -> { ACC }
             if (0 <= arg_max_index)
             {
                 g_dxl_present_acceleration = g_cmd_args[0];
@@ -272,7 +272,6 @@ void loop()
                     {
                         continue;
                     }
-                    dxl_pos_msg += "ID";
                     dxl_pos_msg += String(dxl_i);
                     dxl_pos_msg += "->";
                     dxl_pos_msg += String(uint16_t(dxl.getPresentPosition(dxl_i)));
