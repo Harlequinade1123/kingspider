@@ -178,7 +178,7 @@ void loop()
      * [v] -> モータの速度の設定値を60にする
      * [b] -> モータの速度の設定値を100にする
      * 以下は追加コマンド
-     * [a,POS1,POS2,...] -> 全てのモータの位置制御（初期型のmコマンド）
+     * [a,POS1,POS2,..., POS_DXL_CNT] -> 全てのモータの位置制御（初期型のmコマンド）
      * [v,VEL] -> モータの速度の設定値をVELにする
      * [k,ACC] -> モータの加速度の設定値をACCにする
      * [p] -> モータの現在位置を取得する
@@ -249,7 +249,7 @@ void loop()
         case 'b': // g_cmd_args -> { }
             g_dxl_present_velocity = 100;
             break;
-        case 'a': // g_cmd_args -> { POS1, POS2, ..., POS_DXL_CENT }
+        case 'a': // g_cmd_args -> { POS1, POS2, ..., POS_DXL_CNT }
             for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
             {
                 if (0 < dxl_i <= DXL_CNT)
@@ -265,17 +265,21 @@ void loop()
             break;
         case 'p': // g_cmd_args -> { }
             {
-                String dxl_pos_msg = "[ ";
+                String dxl_pos_msg = "[";
                 for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
                 {
-                    if (!g_dxl_is_connected[dxl_i])
+                    if (g_dxl_is_connected[dxl_i])
                     {
-                        continue;
+                        dxl_pos_msg += String(uint16_t(dxl.getPresentPosition(dxl_i)));
                     }
-                    dxl_pos_msg += String(dxl_i);
-                    dxl_pos_msg += "->";
-                    dxl_pos_msg += String(uint16_t(dxl.getPresentPosition(dxl_i)));
-                    dxl_pos_msg += " ";
+                    else
+                    {
+                        dxl_pos_msg += "-1";
+                    }
+                    if (dxl_i < DXL_CNT)
+                    {
+                        dxl_pos_msg += ",";
+                    }
                 }
                 dxl_pos_msg += "]";
                 USB_SERIAL.println(dxl_pos_msg);
