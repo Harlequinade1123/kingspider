@@ -1,16 +1,16 @@
 //public関数一覧
-//KingSpider()
-//writeCommand(String command)
-//rotateRollPitchYaw(float roll, float pitch, float yaw)
-//moveXY(float x, float y)
-//setJointAngleValue(int joint_id, int value)
-//setJointAngleValue(int joint_id, int value)
-//setJointSpeedValue(int joint_id, int value)
-//setJointSpeedValue(int value)
-//setJointSpeed(int joint_id, float value)
-//setJointSpeed(float value)
-//setMovementSpeed(float value)
-//setRPYSpeed(float value)
+//KingSpider()                                           : コンストラクタ
+//writeCommand(String command)                           : openRB, openCMと同じコマンドに反応して動作
+//rotateRollPitchYaw(float roll, float pitch, float yaw) : 姿勢角[rad]を指定
+//moveXY(float x, float y)                               : 位置[mm]を指定
+//setJointAngleValue(int joint_id, int value)            : 関節角度(0-1024)を設定
+//getJointAngleValue(int joint_id)                       : 関節角度(0-1024)を取得
+//setJointSpeedValue(int joint_id, int value)            : 関節角速度(0-500くらい)を設定
+//getJointSpeedValue(int value)                          : 関節角速度(0-500くらい)を取得
+//setJointSpeed(int joint_id, float value)               : 関節角速度[rpm]を設定
+//getJointSpeed(float value)                             : 関節角速度[rpm]を取得
+//setMovementSpeed(float value)                          : 関節角度[mm/s]を設定(0.001未満の場合瞬間的に移動)
+//setRPYSpeed(float value)                               : 姿勢角の角速度[rpm]を設定(0.001未満の場合瞬間的に回転)
 
 public class KingSpider extends PApplet
 {
@@ -164,6 +164,22 @@ public class KingSpider extends PApplet
             target_joint_values[12] = 512; target_joint_values[13] = 512; target_joint_values[14] = 512;
             target_joint_values[15] = 512; target_joint_values[16] = 512; target_joint_values[17] = 512;
         }
+        else if (command.equals("[c]\n"))
+        {
+            setJointSpeedValue(30);
+        }
+        else if (command.equals("[v]\n"))
+        {
+            setJointSpeedValue(60);
+        }
+        else if (command.equals("[b]\n"))
+        {
+            setJointSpeedValue(100);
+        }
+        else if (command.equals("[n]\n"))
+        {}
+        else if (command.equals("[f]\n"))
+        {}
         if (4 < command_length && command.charAt(0) == '[' && command.charAt(command_length - 2) == ']' && command.charAt(command_length - 1) == '\n')
         {
             char    command_code       = command.charAt(1);
@@ -190,7 +206,6 @@ public class KingSpider extends PApplet
                     return;
                 }
             }
-
             int command_value_size = command_value_list.size();
             if (command.charAt(1) == 's' && 4 < command_length)
             {
@@ -207,13 +222,19 @@ public class KingSpider extends PApplet
                     setJointAngleValue(int(command_value_list.get(i)), int(command_value_list.get(i + 1)));
                 }
             }
+            if (command.charAt(1) == 'a' && 18 <= command_value_list.length)
+            {
+                for (int i = 0; i < 18; i++)
+                {
+                    setJointAngleValue(i, int(command_value_list.get(i)));
+                }
+            }
             if (command.charAt(1) == 'v' && 4 < command_length)
             {
                 setJointSpeedValue(int(command_value_list.get(0)));
             }
         }
     }
-
     public void rotateRollPitchYaw(float roll, float pitch, float yaw)
     {
         target_roll  = roll;
@@ -281,6 +302,7 @@ public class KingSpider extends PApplet
             return;
         }
         joint_speeds[joint_id - 1] = float(value) * 0.111;
+        //rpmを0-59（AXの無負荷回転数）に制限
         if (joint_speeds[joint_id - 1] < 0)
         {
             joint_speeds[joint_id - 1] = 0.0;
