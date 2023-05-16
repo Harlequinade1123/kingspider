@@ -218,21 +218,28 @@ public class KingSpider extends PApplet
                 }
                 setJointAngleValue(int(command_value_list.get(0)), int(command_value_list.get(1)));
             }
-            if (command.charAt(1) == 'm' && 4 < command_length)
+            else if (command.charAt(1) == 'm' && 4 < command_length)
             {
                 for (int i = 0; i < command_value_size - 1; i+=2)
                 {
                     setJointAngleValue(int(command_value_list.get(i)), int(command_value_list.get(i + 1)));
                 }
             }
-            if (command.charAt(1) == 'a' && 18 <= command_value_list.size())
+            else if (command.charAt(1) == 'a' && 18 <= command_value_list.size())
             {
                 for (int i = 0; i < 18; i++)
                 {
                     setJointAngleValue(i, int(command_value_list.get(i)));
                 }
             }
-            if (command.charAt(1) == 'v' && 4 < command_length)
+            else if (command.charAt(1) == 'v' && 1 < command_value_list.size())
+            {
+                for (int i = 0; i < command_value_size - 1; i+=2)
+                {
+                    setJointSpeedValue(int(command_value_list.get(i)), int(command_value_list.get(i + 1)));
+                }
+            }
+            else if (command.charAt(1) == 'v' && 4 < command_length)
             {
                 setJointSpeedValue(int(command_value_list.get(0)));
             }
@@ -280,7 +287,7 @@ public class KingSpider extends PApplet
             return -1;
         }
 
-        return int(1024.0 * (6.0 * present_joint_angles[joint_id - 1] / 5.0 / PI + 0.5));
+        return int(1024.0 * (3.0 * present_joint_angles[joint_id - 1] / 5.0 / PI + 0.5));
     }
 
     public float[] getLegXYZ(int leg_id)
@@ -448,7 +455,7 @@ public class KingSpider extends PApplet
         textSize(24);
         for (int joint_id = 0; joint_id < 18; joint_id++)
         {
-            int joint_value = int(1024.0 * (6.0 * present_joint_angles[joint_id] / 5.0 / PI + 0.5));
+            int joint_value = int(1024.0 * (3.0 * present_joint_angles[joint_id] / 5.0 / PI + 0.5));
             showText3d("ID" + str(joint_id + 1), 40, 50 + 24 * joint_id);
             showText3d(":", 90, 50 + 24 * joint_id);
             showText3d(str(joint_value), 105, 50 + 24 * joint_id);
@@ -533,7 +540,7 @@ public class KingSpider extends PApplet
     {
         for (int joint_id = 0; joint_id < 18; joint_id++)
         {
-            float target_joint_angle = (float(target_joint_values[joint_id]) / 1024.0 - 0.5) * 5.0 * PI / 6.0;
+            float target_joint_angle = (float(target_joint_values[joint_id]) / 1024.0 - 0.5) * 5.0 * PI / 3.0;
             float joint_speed = joint_speeds[joint_id];
             if (joint_speed < 0.001)
             {
