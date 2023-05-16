@@ -24,10 +24,12 @@ const unsigned long USB_BUADRATE = 57600;   // USBのボーレート
 const unsigned long BT_BUADRATE  = 57600;   // Bluetoothデバイスのボーレート
 const unsigned long DXL_BUADRATE = 1000000; // Dynamixelのボーレート
 
-uint16_t g_dxl_present_velocity      = 100; // Dynamixelの速度
-uint16_t g_dxl_present_acceleration  = 100; // Dynamixelの加速度
+// Dynamixelの速度
+uint16_t g_dxl_present_velocities[19]    = { 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100 };
+// Dynamixelの加速度
+uint16_t g_dxl_present_accelerations[19] = { 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100 };
 // Dynamixelの目標位置
-uint16_t g_dxl_pos[19]          = { 0, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512 };
+uint16_t g_dxl_pos[19]          = { 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512 };
 // Dynamixelが接続されているかどうか
 bool     g_dxl_is_connected[19] = { false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false };
 bool     g_torque_is_on = false; // Dynamixelがトルクオンかどうか
@@ -179,8 +181,10 @@ void loop()
      * [b] -> モータの速度の設定値を100にする
      * 以下は追加コマンド
      * [a,POS1,POS2,..., POS_DXL_CNT] -> 全てのモータの位置制御（初期型のmコマンド）
-     * [v,VEL] -> モータの速度の設定値をVELにする
-     * [k,ACC] -> モータの加速度の設定値をACCにする
+     * [v,VEL] -> 全てのモータの速度の設定値をVELにする
+     * [v,ID1,VEL1,ID2,VEL2,...] -> 指定したモータ複数の速度設定
+     * [k,ACC] -> 全てのモータの加速度の設定値をACCにする
+     * [k,ID1,ACC1,ID2,ACC2,...] -> 指定したモータ複数の加速度設定
      * [p] -> モータの現在位置を取得する
      */
     switch (g_cmd_word)
@@ -234,33 +238,68 @@ void loop()
             }
             break;
         case 'c': // g_cmd_args -> { }
-            g_dxl_present_velocity = 30;
-            break;
-        case 'v': // g_cmd_args -> { VEL } or { }
-            if (0 <= arg_max_index)
+            for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
             {
-                g_dxl_present_velocity = g_cmd_args[0];
+                g_dxl_present_velocities[dxl_i] = 30;
+            }
+            break;
+        case 'v': // g_cmd_args -> { ID1, VEL1, ID2, VEL2, ... }, { VEL } or { }
+            if (1 <= arg_max_index)
+            {
+                for (int arg_i = 0; arg_i < arg_max_index; arg_i+=2)
+                {
+                    if (0 < g_cmd_args[arg_i] && g_cmd_args[arg_i] <= DXL_CNT)
+                    {
+                        g_dxl_present_velocities[g_cmd_args[arg_i]] = g_cmd_args[arg_i + 1];
+                    }
+                }
+            }
+            else if (0 == arg_max_index)
+            {
+                for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
+                {
+                    g_dxl_present_velocities[dxl_i] = g_cmd_args[0];
+                }
             }
             else
             {
-                g_dxl_present_velocity = 60;
+                for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
+                {
+                    g_dxl_present_velocities[dxl_i] = 60;
+                }
             }
             break;
         case 'b': // g_cmd_args -> { }
-            g_dxl_present_velocity = 100;
-            break;
-        case 'a': // g_cmd_args -> { POS1, POS2, ..., POS_DXL_CNT }
             for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
             {
-                if (0 < dxl_i <= DXL_CNT)
+                g_dxl_present_velocities[dxl_i] = 100;
+            }
+            break;
+        case 'a': // g_cmd_args -> { POS1, POS2, ..., POS_DXL_CNT }
+            if (arg_max_index == DXL_CNT - 1)
+            {
+                for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
                 {
                     g_dxl_pos[dxl_i] = constrain(g_cmd_args[dxl_i - 1], DXL_MIN_POSITION_VALUE, DXL_MAX_POSITION_VALUE);
                 }
             }
-        case 'k': // g_cmd_args -> { ACC }
-            if (0 <= arg_max_index)
+        case 'k': // g_cmd_args -> { ID1, ACC1, ID2, ACC2, ... } or { ACC }
+            if (1 <= arg_max_index)
             {
-                g_dxl_present_acceleration = g_cmd_args[0];
+                for (int arg_i = 0; arg_i < arg_max_index; arg_i+=2)
+                {
+                    if (0 < g_cmd_args[arg_i] && g_cmd_args[arg_i] <= DXL_CNT)
+                    {
+                        g_dxl_present_accelerations[g_cmd_args[arg_i]] = g_cmd_args[arg_i + 1];
+                    }
+                }
+            }
+            else if (0 == arg_max_index)
+            {
+                for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
+                {
+                    g_dxl_present_accelerations[dxl_i] = g_cmd_args[0];
+                }
             }
             break;
         case 'p': // g_cmd_args -> { }
@@ -304,12 +343,12 @@ void loop()
             }
             if (1.5 <= DXL_PROTOCOL_VERSION)
             {
-                dxl.writeControlTableItem(PROFILE_VELOCITY, dxl_i, g_dxl_present_velocity);
-                dxl.writeControlTableItem(PROFILE_ACCELERATION, dxl_i, g_dxl_present_acceleration);
+                dxl.writeControlTableItem(PROFILE_VELOCITY, dxl_i, g_dxl_present_velocities[dxl_i]);
+                dxl.writeControlTableItem(PROFILE_ACCELERATION, dxl_i, g_dxl_present_accelerations[dxl_i]);
             }
             else
             {
-                dxl.writeControlTableItem(MOVING_SPEED, dxl_i, g_dxl_present_velocity);
+                dxl.writeControlTableItem(MOVING_SPEED, dxl_i, g_dxl_present_velocities[dxl_i]);
             }
         }
         for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
