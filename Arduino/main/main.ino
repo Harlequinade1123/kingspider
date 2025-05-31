@@ -11,8 +11,13 @@
     const bool SENSOR_IS_AVAILABLE = true;
 #endif
 
+
+#define DXL_SERIAL Serial1
 #define USB_SERIAL Serial
 #define BT_SERIAL  Serial2
+
+const int DXL_DIR_PIN = -1;
+const bool SENSOR_IS_AVAILABLE = true;
 
 const uint8_t  DXL_CNT                = 18;  // モータの数
 const float    DXL_PROTOCOL_VERSION   = 1.0; // モータの通信プロトコル（AX->1.0, XC->2.0）
