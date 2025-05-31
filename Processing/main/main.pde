@@ -16,7 +16,7 @@ void setup()
     size(800, 600);
     frameRate(100);
     smooth();
-    myPort=new Serial(this, "/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_AG0K52JD-if00-port0", 57600);
+    myPort=new Serial(this, "/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_AG0K5ARF-if00-port0", 57600);
     myPort.clear();
     println("serial open");
     //while (myPort.available()>0)
