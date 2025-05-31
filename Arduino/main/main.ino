@@ -4,39 +4,53 @@
 #if defined(ARDUINO_OpenCM904)
     #define DXL_SERIAL Serial3
     const int DXL_DIR_PIN = 22;
-    const bool SENSOR_IS_AVAILABLE = false;
 #elif defined(ARDUINO_OpenRB)
     #define DXL_SERIAL Serial1
     const int DXL_DIR_PIN = -1;
-    const bool SENSOR_IS_AVAILABLE = true;
 #endif
-
 
 #define DXL_SERIAL Serial1
 #define USB_SERIAL Serial
 #define BT_SERIAL  Serial2
 
-const int DXL_DIR_PIN = -1;
-const bool SENSOR_IS_AVAILABLE = true;
-
-const uint8_t  DXL_CNT                = 18;  // モータの数
-const float    DXL_PROTOCOL_VERSION   = 1.0; // モータの通信プロトコル（AX->1.0, XC->2.0）
-const uint16_t DXL_INIT_VELOCITY      = 100; // モータの初期速度
-const uint16_t DXL_INIT_ACCELERATION  = 100; // モータの初期加速度
-const uint16_t DXL_MAX_POSITION_VALUE = 850; // モータの最大値
-const uint16_t DXL_MIN_POSITION_VALUE = 150; // モータの最小値
+const uint8_t  DXL_MAX_CNT       = 18;   // モータの数
 const unsigned long USB_BUADRATE = 57600;   // USBのボーレート
 const unsigned long BT_BUADRATE  = 57600;   // Bluetoothデバイスのボーレート
 const unsigned long DXL_BUADRATE = 1000000; // Dynamixelのボーレート
 
-// Dynamixelの速度
-uint16_t g_dxl_present_velocities[19]    = { 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100 };
-// Dynamixelの加速度
-uint16_t g_dxl_present_accelerations[19] = { 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100 };
-// Dynamixelの目標位置
-uint16_t g_dxl_pos[19]          = { 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512 };
-// Dynamixelが接続されているかどうか
-bool     g_dxl_is_connected[19] = { false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false };
+uint16_t DXL_INIT_VELOCITY;
+uint16_t DXL_INIT_ACCELERATION;
+uint16_t DXL_INIT_POSITION;
+uint16_t DXL_MAX_POSITION_VALUE;
+uint16_t DXL_MIN_POSITION_VALUE;
+
+// =============== プロトコル1.0 ===============
+uint16_t DXL_INIT_VELOCITY1      = 100; // モータの初期速度
+uint16_t DXL_INIT_ACCELERATION1  = 100; // モータの初期加速度
+uint16_t DXL_INIT_POSITION1      = 512; // モータの初期位置
+uint16_t DXL_MAX_POSITION_VALUE1 = 850; // モータの最大値
+uint16_t DXL_MIN_POSITION_VALUE1 = 150; // モータの最小値
+
+// =============== プロトコル2.0 ===============
+uint16_t DXL_INIT_VELOCITY2      = 100;  // モータの初期速度
+uint16_t DXL_INIT_ACCELERATION2  = 100;  // モータの初期加速度
+uint16_t DXL_INIT_POSITION2      = 2048; // モータの初期位置
+uint16_t DXL_MAX_POSITION_VALUE2 = 4095; // モータの最大値
+uint16_t DXL_MIN_POSITION_VALUE2 = 0;    // モータの最小値
+
+// [e]コマンド時のDynamixelの目標位置
+uint16_t g_dxl_e_pos[19];
+uint16_t g_dxl_e_pos1[19] = { 512, 512, 512, 819, 205, 512, 512, 512, 512, 205, 819, 512, 512, 512, 512, 205, 819, 512, 512 };
+uint16_t g_dxl_e_pos2[19] = { 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048 };
+
+uint16_t g_dxl_present_velocities[19];    // Dynamixelの速度
+uint16_t g_dxl_present_accelerations[19]; // Dynamixelの加速度
+uint16_t g_dxl_pos[19];                   // Dynamixelの目標位置
+bool     g_dxl_is_connected[19];          // Dynamixelが接続されているかどうか
+
+//通信プロトコル 1.0 or 2.0 のDynamixelが存在するか
+bool g_exists_protocols[3] = { false, false, false };
+
 bool     g_torque_is_on = false; // Dynamixelがトルクオンかどうか
 String   g_read_line    = "";    // シリアル通信で受け取るコマンド
 char     g_cmd_word     = '\0';  // コマンドのキーワード
@@ -92,29 +106,69 @@ void setup()
     delay(2000);
 
     dxl.begin(DXL_BUADRATE);
-    dxl.setPortProtocolVersion(DXL_PROTOCOL_VERSION);
+
+    // 通信プロトコルの推定
+    for(int8_t protocol = 1; protocol < 3; protocol++)
+    {
+        dxl.setPortProtocolVersion((float)protocol);
+        for (int dxl_i = 1; dxl_i <= DXL_MAX_CNT; dxl_i++)
+        {
+            g_exists_protocols[protocol] = g_exists_protocols[protocol] || dxl.ping(dxl_i);
+            if (g_exists_protocols[protocol])
+            {
+                break;
+            }
+        }
+    }
+
+    // 通信プロトコルの設定
+    if (g_exists_protocols[1]) dxl.setPortProtocolVersion(1.0);
+    else                       dxl.setPortProtocolVersion(2.0);
 
     // 誤作動防止のためDynamixelが一つ以上認識されるまで待機する
     uint8_t dxl_id = 1;
     while (!dxl.ping(dxl_id))
     {
         dxl_id++;
-        dxl_id %= DXL_CNT + 1;
+        dxl_id %= DXL_MAX_CNT + 1;
         delay(5);
     }
     delay(100);
 
     // 接続されているDynamixelを確認する
-    for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
+    for (int dxl_i = 1; dxl_i <= DXL_MAX_CNT; dxl_i++)
     {
-        if (dxl.ping(dxl_i))
-        {
-            g_dxl_is_connected[dxl_i] = true;
-        }
-        else
-        {
-            g_dxl_is_connected[dxl_i] = false;
-        }
+        if (dxl.ping(dxl_i)) g_dxl_is_connected[dxl_i] = true;
+        else                 g_dxl_is_connected[dxl_i] = false;
+    }
+
+    // モータの初期設定
+    if (g_exists_protocols[1])
+    {
+        DXL_INIT_VELOCITY      = DXL_INIT_VELOCITY1;
+        DXL_INIT_ACCELERATION  = DXL_INIT_ACCELERATION1;
+        DXL_INIT_POSITION      = DXL_INIT_POSITION1;
+        DXL_MAX_POSITION_VALUE = DXL_MAX_POSITION_VALUE1;
+        DXL_MIN_POSITION_VALUE = DXL_MIN_POSITION_VALUE1;
+    }
+    else
+    {
+        DXL_INIT_VELOCITY      = DXL_INIT_VELOCITY2;
+        DXL_INIT_ACCELERATION  = DXL_INIT_ACCELERATION2;
+        DXL_INIT_POSITION      = DXL_INIT_POSITION2;
+        DXL_MAX_POSITION_VALUE = DXL_MAX_POSITION_VALUE2;
+        DXL_MIN_POSITION_VALUE = DXL_MIN_POSITION_VALUE2;
+    }
+    
+    // グローバル変数の初期設定
+    for (int dxl_i = 0; dxl_i <= DXL_MAX_CNT; dxl_i++)
+    {
+        if (g_exists_protocols[1]) g_dxl_e_pos[dxl_i] = g_dxl_e_pos1[dxl_i];
+        else                       g_dxl_e_pos[dxl_i] = g_dxl_e_pos2[dxl_i];
+        g_dxl_present_velocities[dxl_i]    = DXL_INIT_VELOCITY;
+        g_dxl_present_accelerations[dxl_i] = DXL_INIT_ACCELERATION;
+        g_dxl_pos[dxl_i]                   = DXL_INIT_POSITION;
+        g_dxl_is_connected[dxl_i]          = false;
     }
 
     // 接続されたDynamixelに対して初期設定を行い現在角度の表示する
@@ -122,7 +176,7 @@ void setup()
     {
         USB_SERIAL.println("----- DXL_DEFAULT_POSITION_VALUE ------");
     }
-    for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
+    for (int dxl_i = 1; dxl_i <= DXL_MAX_CNT; dxl_i++)
     {
         if (!g_dxl_is_connected[dxl_i])
         {
@@ -131,14 +185,14 @@ void setup()
         dxl.torqueOff(dxl_i);
         dxl.setOperatingMode(dxl_i, OP_POSITION);
         dxl.torqueOn(dxl_i);
-        if (1.5 <= DXL_PROTOCOL_VERSION)
+        if (g_exists_protocols[1])
         {
-            dxl.writeControlTableItem(PROFILE_VELOCITY, dxl_i, DXL_INIT_VELOCITY);
-            dxl.writeControlTableItem(PROFILE_ACCELERATION, dxl_i, DXL_INIT_ACCELERATION);
+            dxl.writeControlTableItem(MOVING_SPEED, dxl_i, DXL_INIT_VELOCITY);
         }
         else
         {
-            dxl.writeControlTableItem(MOVING_SPEED, dxl_i, DXL_INIT_VELOCITY);
+            dxl.writeControlTableItem(PROFILE_VELOCITY, dxl_i, DXL_INIT_VELOCITY);
+            dxl.writeControlTableItem(PROFILE_ACCELERATION, dxl_i, DXL_INIT_ACCELERATION);
         }
 
         g_dxl_pos[dxl_i] = constrain(uint16_t(dxl.getPresentPosition(dxl_i)), DXL_MIN_POSITION_VALUE, DXL_MAX_POSITION_VALUE);
@@ -185,7 +239,7 @@ void loop()
      * [v] -> モータの速度の設定値を60にする
      * [b] -> モータの速度の設定値を100にする
      * 以下は追加コマンド
-     * [a,POS1,POS2,..., POS_DXL_CNT] -> 全てのモータの位置制御（初期型のmコマンド）
+     * [a,POS1,POS2,..., POS_DXL_MAX_CNT] -> 全てのモータの位置制御（初期型のmコマンド）
      * [v,VEL] -> 全てのモータの速度の設定値をVELにする
      * [v,ID1,VEL1,ID2,VEL2,...] -> 指定したモータ複数の速度設定
      * [k,ACC] -> 全てのモータの加速度の設定値をACCにする
@@ -203,25 +257,26 @@ void loop()
         case 'm': // g_cmd_args -> { ID1, POS1, ID2, POS2, ... }
             for (int arg_i = 0; arg_i < arg_max_index; arg_i+=2)
             {
-                if (0 < arg_i <= DXL_CNT)
+                if (0 < arg_i <= DXL_MAX_CNT)
                 {
                     g_dxl_pos[g_cmd_args[arg_i]] = constrain(g_cmd_args[arg_i + 1], DXL_MIN_POSITION_VALUE, DXL_MAX_POSITION_VALUE);
                 }
             }
             break;
         case 'i': // g_cmd_args -> { } 
-            for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
+            for (int dxl_i = 1; dxl_i <= DXL_MAX_CNT; dxl_i++)
             {
-                g_dxl_pos[dxl_i] = 512;
+                g_dxl_pos[dxl_i] = DXL_INIT_POSITION;
             }
             break;
         case 'e': // g_cmd_args -> { }
-            g_dxl_pos[1]  = 512; g_dxl_pos[2]  = 512; g_dxl_pos[3]  = 819; g_dxl_pos[4]  = 205; g_dxl_pos[5]  = 512; g_dxl_pos[6]  = 512;
-            g_dxl_pos[7]  = 512; g_dxl_pos[8]  = 512; g_dxl_pos[9]  = 205; g_dxl_pos[10] = 819; g_dxl_pos[11] = 512; g_dxl_pos[12] = 512;
-            g_dxl_pos[13] = 512; g_dxl_pos[14] = 512; g_dxl_pos[15] = 205; g_dxl_pos[16] = 819; g_dxl_pos[17] = 512; g_dxl_pos[18] = 512;
+            for (int dxl_i = 1; dxl_i <= DXL_MAX_CNT; dxl_i++)
+            {
+                g_dxl_pos[dxl_i] = g_dxl_e_pos[dxl_i];
+            }
             break;
         case 'f': // g_cmd_args -> { }
-            for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
+            for (int dxl_i = 1; dxl_i <= DXL_MAX_CNT; dxl_i++)
             {
                 if (!g_dxl_is_connected[dxl_i])
                 {
@@ -232,7 +287,7 @@ void loop()
             }
             break;
         case 'n': // g_cmd_args -> { }
-            for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
+            for (int dxl_i = 1; dxl_i <= DXL_MAX_CNT; dxl_i++)
             {
                 if (!g_dxl_is_connected[dxl_i])
                 {
@@ -243,7 +298,7 @@ void loop()
             }
             break;
         case 'c': // g_cmd_args -> { }
-            for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
+            for (int dxl_i = 1; dxl_i <= DXL_MAX_CNT; dxl_i++)
             {
                 g_dxl_present_velocities[dxl_i] = 30;
             }
@@ -253,7 +308,7 @@ void loop()
             {
                 for (int arg_i = 0; arg_i < arg_max_index; arg_i+=2)
                 {
-                    if (0 < g_cmd_args[arg_i] && g_cmd_args[arg_i] <= DXL_CNT)
+                    if (0 < g_cmd_args[arg_i] && g_cmd_args[arg_i] <= DXL_MAX_CNT)
                     {
                         g_dxl_present_velocities[g_cmd_args[arg_i]] = g_cmd_args[arg_i + 1];
                     }
@@ -261,29 +316,29 @@ void loop()
             }
             else if (0 == arg_max_index)
             {
-                for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
+                for (int dxl_i = 1; dxl_i <= DXL_MAX_CNT; dxl_i++)
                 {
                     g_dxl_present_velocities[dxl_i] = g_cmd_args[0];
                 }
             }
             else
             {
-                for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
+                for (int dxl_i = 1; dxl_i <= DXL_MAX_CNT; dxl_i++)
                 {
                     g_dxl_present_velocities[dxl_i] = 60;
                 }
             }
             break;
         case 'b': // g_cmd_args -> { }
-            for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
+            for (int dxl_i = 1; dxl_i <= DXL_MAX_CNT; dxl_i++)
             {
                 g_dxl_present_velocities[dxl_i] = 100;
             }
             break;
-        case 'a': // g_cmd_args -> { POS1, POS2, ..., POS_DXL_CNT }
-            if (arg_max_index == DXL_CNT - 1)
+        case 'a': // g_cmd_args -> { POS1, POS2, ..., POS_DXL_MAX_CNT }
+            if (arg_max_index == DXL_MAX_CNT - 1)
             {
-                for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
+                for (int dxl_i = 1; dxl_i <= DXL_MAX_CNT; dxl_i++)
                 {
                     g_dxl_pos[dxl_i] = constrain(g_cmd_args[dxl_i - 1], DXL_MIN_POSITION_VALUE, DXL_MAX_POSITION_VALUE);
                 }
@@ -293,7 +348,7 @@ void loop()
             {
                 for (int arg_i = 0; arg_i < arg_max_index; arg_i+=2)
                 {
-                    if (0 < g_cmd_args[arg_i] && g_cmd_args[arg_i] <= DXL_CNT)
+                    if (0 < g_cmd_args[arg_i] && g_cmd_args[arg_i] <= DXL_MAX_CNT)
                     {
                         g_dxl_present_accelerations[g_cmd_args[arg_i]] = g_cmd_args[arg_i + 1];
                     }
@@ -301,7 +356,7 @@ void loop()
             }
             else if (0 == arg_max_index)
             {
-                for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
+                for (int dxl_i = 1; dxl_i <= DXL_MAX_CNT; dxl_i++)
                 {
                     g_dxl_present_accelerations[dxl_i] = g_cmd_args[0];
                 }
@@ -310,7 +365,7 @@ void loop()
         case 'p': // g_cmd_args -> { }
             {
                 String dxl_pos_msg = "[";
-                for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
+                for (int dxl_i = 1; dxl_i <= DXL_MAX_CNT; dxl_i++)
                 {
                     if (g_dxl_is_connected[dxl_i])
                     {
@@ -320,7 +375,7 @@ void loop()
                     {
                         dxl_pos_msg += "-1";
                     }
-                    if (dxl_i < DXL_CNT)
+                    if (dxl_i < DXL_MAX_CNT)
                     {
                         dxl_pos_msg += ",";
                     }
@@ -340,23 +395,23 @@ void loop()
     // トルクオフ -> 現在位置を読み込み，g_dxl_posを更新（トルクオン時に突然動き出すことを防止するため）
     if (g_torque_is_on)
     {
-        for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
+        for (int dxl_i = 1; dxl_i <= DXL_MAX_CNT; dxl_i++)
         {
             if (!g_dxl_is_connected[dxl_i])
             {
                 continue;
             }
-            if (1.5 <= DXL_PROTOCOL_VERSION)
+            if (g_exists_protocols[1])
+            {
+                dxl.writeControlTableItem(MOVING_SPEED, dxl_i, g_dxl_present_velocities[dxl_i]);
+            }
+            else
             {
                 dxl.writeControlTableItem(PROFILE_VELOCITY, dxl_i, g_dxl_present_velocities[dxl_i]);
                 dxl.writeControlTableItem(PROFILE_ACCELERATION, dxl_i, g_dxl_present_accelerations[dxl_i]);
             }
-            else
-            {
-                dxl.writeControlTableItem(MOVING_SPEED, dxl_i, g_dxl_present_velocities[dxl_i]);
-            }
         }
-        for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
+        for (int dxl_i = 1; dxl_i <= DXL_MAX_CNT; dxl_i++)
         {
             if (!g_dxl_is_connected[dxl_i])
             {
@@ -367,7 +422,7 @@ void loop()
     }
     else
     {
-        for (int dxl_i = 1; dxl_i <= DXL_CNT; dxl_i++)
+        for (int dxl_i = 1; dxl_i <= DXL_MAX_CNT; dxl_i++)
         {
             if (!g_dxl_is_connected[dxl_i])
             {
