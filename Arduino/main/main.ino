@@ -266,12 +266,20 @@ void loop()
         case 'i': // g_cmd_args -> { } 
             for (int dxl_i = 1; dxl_i <= DXL_MAX_CNT; dxl_i++)
             {
+                if (!g_dxl_is_connected[dxl_i])
+                {
+                    continue;
+                }
                 g_dxl_pos[dxl_i] = DXL_INIT_POSITION;
             }
             break;
         case 'e': // g_cmd_args -> { }
             for (int dxl_i = 1; dxl_i <= DXL_MAX_CNT; dxl_i++)
             {
+                if (!g_dxl_is_connected[dxl_i])
+                {
+                    continue;
+                }
                 g_dxl_pos[dxl_i] = g_dxl_e_pos[dxl_i];
             }
             break;
@@ -300,6 +308,10 @@ void loop()
         case 'c': // g_cmd_args -> { }
             for (int dxl_i = 1; dxl_i <= DXL_MAX_CNT; dxl_i++)
             {
+                if (!g_dxl_is_connected[dxl_i])
+                {
+                    continue;
+                }
                 g_dxl_present_velocities[dxl_i] = 30;
             }
             break;
@@ -318,6 +330,10 @@ void loop()
             {
                 for (int dxl_i = 1; dxl_i <= DXL_MAX_CNT; dxl_i++)
                 {
+                    if (!g_dxl_is_connected[dxl_i])
+                    {
+                        continue;
+                    }
                     g_dxl_present_velocities[dxl_i] = g_cmd_args[0];
                 }
             }
@@ -325,6 +341,10 @@ void loop()
             {
                 for (int dxl_i = 1; dxl_i <= DXL_MAX_CNT; dxl_i++)
                 {
+                    if (!g_dxl_is_connected[dxl_i])
+                    {
+                        continue;
+                    }
                     g_dxl_present_velocities[dxl_i] = 60;
                 }
             }
@@ -332,6 +352,10 @@ void loop()
         case 'b': // g_cmd_args -> { }
             for (int dxl_i = 1; dxl_i <= DXL_MAX_CNT; dxl_i++)
             {
+                if (!g_dxl_is_connected[dxl_i])
+                {
+                    continue;
+                }
                 g_dxl_present_velocities[dxl_i] = 100;
             }
             break;
@@ -340,6 +364,10 @@ void loop()
             {
                 for (int dxl_i = 1; dxl_i <= DXL_MAX_CNT; dxl_i++)
                 {
+                    if (!g_dxl_is_connected[dxl_i])
+                    {
+                        continue;
+                    }
                     g_dxl_pos[dxl_i] = constrain(g_cmd_args[dxl_i - 1], DXL_MIN_POSITION_VALUE, DXL_MAX_POSITION_VALUE);
                 }
             }
@@ -358,6 +386,10 @@ void loop()
             {
                 for (int dxl_i = 1; dxl_i <= DXL_MAX_CNT; dxl_i++)
                 {
+                    if (!g_dxl_is_connected[dxl_i])
+                    {
+                        continue;
+                    }
                     g_dxl_present_accelerations[dxl_i] = g_cmd_args[0];
                 }
             }
@@ -367,6 +399,10 @@ void loop()
                 String dxl_pos_msg = "[";
                 for (int dxl_i = 1; dxl_i <= DXL_MAX_CNT; dxl_i++)
                 {
+                    if (!g_dxl_is_connected[dxl_i])
+                    {
+                        continue;
+                    }
                     if (g_dxl_is_connected[dxl_i])
                     {
                         dxl_pos_msg += String(uint16_t(dxl.getPresentPosition(dxl_i)));
