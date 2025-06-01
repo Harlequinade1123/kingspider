@@ -166,6 +166,10 @@ void setup()
     // グローバル変数の初期設定
     for (int dxl_i = 0; dxl_i <= DXL_MAX_CNT; dxl_i++)
     {
+        if (!g_dxl_is_connected[dxl_i])
+        {
+            continue;
+        }
         if (g_exists_protocols[1]) g_dxl_e_pos[dxl_i] = g_dxl_e_pos1[dxl_i];
         else                       g_dxl_e_pos[dxl_i] = g_dxl_e_pos2[dxl_i];
         g_dxl_present_velocities[dxl_i]    = DXL_INIT_VELOCITY;
@@ -262,6 +266,10 @@ void loop()
             {
                 if (0 < arg_i <= DXL_MAX_CNT)
                 {
+                    if (!g_dxl_is_connected[g_cmd_args[arg_i]])
+                    {
+                        continue;
+                    }
                     g_dxl_pos[g_cmd_args[arg_i]] = constrain(g_cmd_args[arg_i + 1], DXL_MIN_POSITION_VALUE, DXL_MAX_POSITION_VALUE);
                 }
             }
@@ -325,6 +333,10 @@ void loop()
                 {
                     if (0 < g_cmd_args[arg_i] && g_cmd_args[arg_i] <= DXL_MAX_CNT)
                     {
+                        if (!g_dxl_is_connected[g_cmd_args[arg_i]])
+                        {
+                            continue;
+                        }
                         g_dxl_present_velocities[g_cmd_args[arg_i]] = g_cmd_args[arg_i + 1];
                     }
                 }
@@ -381,6 +393,10 @@ void loop()
                 {
                     if (0 < g_cmd_args[arg_i] && g_cmd_args[arg_i] <= DXL_MAX_CNT)
                     {
+                        if (!g_dxl_is_connected[g_cmd_args[arg_i]])
+                        {
+                            continue;
+                        }
                         g_dxl_present_accelerations[g_cmd_args[arg_i]] = g_cmd_args[arg_i + 1];
                     }
                 }
