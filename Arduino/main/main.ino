@@ -1,7 +1,10 @@
 #include <Dynamixel2Arduino.h>
 
-//使用するマイコン（OpenCM or OpenRB）の種類に応じて変更
-#if defined(ARDUINO_OpenCM904)
+//使用するマイコン（OpenCR, OpenCM or OpenRB）の種類に応じて変更
+#if defined(ARDUINO_OpenCR)
+    #define DXL_SERIAL Serial3
+    const int DXL_DIR_PIN = 84;
+#elif defined(ARDUINO_OpenCM904)
     #define DXL_SERIAL Serial3
     const int DXL_DIR_PIN = 22;
 #elif defined(ARDUINO_OpenRB)
