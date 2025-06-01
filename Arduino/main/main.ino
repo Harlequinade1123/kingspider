@@ -16,7 +16,7 @@
 #define USB_SERIAL Serial
 #define BT_SERIAL  Serial2
 
-const uint8_t  DXL_MAX_CNT       = 255;   // モータの数
+const uint8_t       DXL_MAX_CNT  = 255;   // モータの数
 const unsigned long USB_BUADRATE = 57600;   // USBのボーレート
 const unsigned long BT_BUADRATE  = 57600;   // Bluetoothデバイスのボーレート
 const unsigned long DXL_BUADRATE = 1000000; // Dynamixelのボーレート
@@ -46,10 +46,10 @@ uint16_t g_dxl_e_pos[256];
 uint16_t g_dxl_e_pos1[19] = { 512, 512, 512, 819, 205, 512, 512, 512, 512, 205, 819, 512, 512, 512, 512, 205, 819, 512, 512 };
 uint16_t g_dxl_e_pos2[19] = { 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048 };
 
-uint16_t g_dxl_present_velocities[256];    // Dynamixelの速度
-uint16_t g_dxl_present_accelerations[256]; // Dynamixelの加速度
-uint16_t g_dxl_pos[256];                   // Dynamixelの目標位置
-bool     g_dxl_is_connected[256];          // Dynamixelが接続されているかどうか
+uint16_t g_dxl_present_vels[256]; // Dynamixelの速度
+uint16_t g_dxl_present_accs[256]; // Dynamixelの加速度
+uint16_t g_dxl_target_pos[256];   // Dynamixelの目標位置
+bool     g_dxl_is_connected[256]; // Dynamixelが接続されているかどうか
 
 //通信プロトコル 1.0 or 2.0 のDynamixelが存在するか
 bool g_exists_protocols[3] = { false, false, false };
@@ -73,10 +73,10 @@ int8_t readCommand()
     int read_line_length = g_read_line.length();
     if (3 <= read_line_length && g_read_line.charAt(0) == '[' && g_read_line.charAt(read_line_length - 1) == ']')
     {
-        g_cmd_word           = g_read_line.charAt(1);
-        int8_t arg_max_index   =-1;
-        int8_t elm_begin_index = 3;
-        int8_t elm_end_index   = 3;
+        g_cmd_word             =  g_read_line.charAt(1);
+        int8_t arg_max_index   = -1;
+        int8_t elm_begin_index =  3;
+        int8_t elm_end_index   =  3;
         
         // カンマ区切りごとに数字を取り出す
         // カンマ，数字以外が含まれていた場合，エラーとして扱い-1を返す
@@ -170,11 +170,11 @@ void setup()
         {
             continue;
         }
-        g_dxl_present_velocities[dxl_i]    = DXL_INIT_VELOCITY;
-        g_dxl_present_accelerations[dxl_i] = DXL_INIT_ACCELERATION;
-        g_dxl_pos[dxl_i]                   = DXL_INIT_POSITION;
-        g_dxl_e_pos[dxl_i]                 = DXL_INIT_POSITION;
-        g_dxl_is_connected[dxl_i]          = false;
+        g_dxl_present_vels[dxl_i] = DXL_INIT_VELOCITY;
+        g_dxl_present_accs[dxl_i] = DXL_INIT_ACCELERATION;
+        g_dxl_target_pos[dxl_i]   = DXL_INIT_POSITION;
+        g_dxl_e_pos[dxl_i]        = DXL_INIT_POSITION;
+        g_dxl_is_connected[dxl_i] = false;
     }
 
     if (g_exists_protocols[1])
@@ -182,7 +182,7 @@ void setup()
         int dxl_cnt = sizeof(g_dxl_e_pos1) / sizeof(g_dxl_e_pos1[0]);
         for (int dxl_i = 1; dxl_i < dxl_cnt; dxl_i++)
         {
-            g_dxl_pos[dxl_i] = g_dxl_e_pos1[dxl_i];
+            g_dxl_target_pos[dxl_i] = g_dxl_e_pos1[dxl_i];
         }
     }
     else
@@ -190,7 +190,7 @@ void setup()
         int dxl_cnt = sizeof(g_dxl_e_pos2) / sizeof(g_dxl_e_pos2[0]);
         for (int dxl_i = 1; dxl_i < dxl_cnt; dxl_i++)
         {
-            g_dxl_pos[dxl_i] = g_dxl_e_pos2[dxl_i];
+            g_dxl_target_pos[dxl_i] = g_dxl_e_pos2[dxl_i];
         }
     }
 
@@ -218,13 +218,13 @@ void setup()
             dxl.writeControlTableItem(PROFILE_ACCELERATION, dxl_i, DXL_INIT_ACCELERATION);
         }
 
-        g_dxl_pos[dxl_i] = constrain(uint16_t(dxl.getPresentPosition(dxl_i)), DXL_MIN_POSITION_VALUE, DXL_MAX_POSITION_VALUE);
+        g_dxl_target_pos[dxl_i] = constrain(uint16_t(dxl.getPresentPosition(dxl_i)), DXL_MIN_POSITION_VALUE, DXL_MAX_POSITION_VALUE);
         if (USB_SERIAL)
         {
             USB_SERIAL.print("[ID:");
             USB_SERIAL.print(dxl_i);
             USB_SERIAL.print(" Pos:");
-            USB_SERIAL.print(g_dxl_pos[dxl_i]);
+            USB_SERIAL.print(g_dxl_target_pos[dxl_i]);
             USB_SERIAL.println("]");
         }
     }
@@ -274,7 +274,7 @@ void loop()
         case 's': // g_cmd_args -> { ID, POS }
             if (1 <= arg_max_index)
             {
-                g_dxl_pos[g_cmd_args[0]] = constrain(g_cmd_args[1], DXL_MIN_POSITION_VALUE, DXL_MAX_POSITION_VALUE);
+                g_dxl_target_pos[g_cmd_args[0]] = constrain(g_cmd_args[1], DXL_MIN_POSITION_VALUE, DXL_MAX_POSITION_VALUE);
             }
             break;
         case 'm': // g_cmd_args -> { ID1, POS1, ID2, POS2, ... }
@@ -286,7 +286,7 @@ void loop()
                     {
                         continue;
                     }
-                    g_dxl_pos[g_cmd_args[arg_i]] = constrain(g_cmd_args[arg_i + 1], DXL_MIN_POSITION_VALUE, DXL_MAX_POSITION_VALUE);
+                    g_dxl_target_pos[g_cmd_args[arg_i]] = constrain(g_cmd_args[arg_i + 1], DXL_MIN_POSITION_VALUE, DXL_MAX_POSITION_VALUE);
                 }
             }
             break;
@@ -297,7 +297,7 @@ void loop()
                 {
                     continue;
                 }
-                g_dxl_pos[dxl_i] = DXL_INIT_POSITION;
+                g_dxl_target_pos[dxl_i] = DXL_INIT_POSITION;
             }
             break;
         case 'e': // g_cmd_args -> { }
@@ -307,7 +307,7 @@ void loop()
                 {
                     continue;
                 }
-                g_dxl_pos[dxl_i] = g_dxl_e_pos[dxl_i];
+                g_dxl_target_pos[dxl_i] = g_dxl_e_pos[dxl_i];
             }
             break;
         case 'f': // g_cmd_args -> { }
@@ -339,7 +339,7 @@ void loop()
                 {
                     continue;
                 }
-                g_dxl_present_velocities[dxl_i] = 30;
+                g_dxl_present_vels[dxl_i] = 30;
             }
             break;
         case 'v': // g_cmd_args -> { ID1, VEL1, ID2, VEL2, ... }, { VEL } or { }
@@ -353,7 +353,7 @@ void loop()
                         {
                             continue;
                         }
-                        g_dxl_present_velocities[g_cmd_args[arg_i]] = g_cmd_args[arg_i + 1];
+                        g_dxl_present_vels[g_cmd_args[arg_i]] = g_cmd_args[arg_i + 1];
                     }
                 }
             }
@@ -365,7 +365,7 @@ void loop()
                     {
                         continue;
                     }
-                    g_dxl_present_velocities[dxl_i] = g_cmd_args[0];
+                    g_dxl_present_vels[dxl_i] = g_cmd_args[0];
                 }
             }
             else
@@ -376,7 +376,7 @@ void loop()
                     {
                         continue;
                     }
-                    g_dxl_present_velocities[dxl_i] = 60;
+                    g_dxl_present_vels[dxl_i] = 60;
                 }
             }
             break;
@@ -387,7 +387,7 @@ void loop()
                 {
                     continue;
                 }
-                g_dxl_present_velocities[dxl_i] = 100;
+                g_dxl_present_vels[dxl_i] = 100;
             }
             break;
         case 'a': // g_cmd_args -> { POS1, POS2, ..., POS_DXL_MAX_CNT }
@@ -399,7 +399,7 @@ void loop()
                     {
                         continue;
                     }
-                    g_dxl_pos[dxl_i] = constrain(g_cmd_args[dxl_i - 1], DXL_MIN_POSITION_VALUE, DXL_MAX_POSITION_VALUE);
+                    g_dxl_target_pos[dxl_i] = constrain(g_cmd_args[dxl_i - 1], DXL_MIN_POSITION_VALUE, DXL_MAX_POSITION_VALUE);
                 }
             }
         case 'k': // g_cmd_args -> { ID1, ACC1, ID2, ACC2, ... } or { ACC }
@@ -413,7 +413,7 @@ void loop()
                         {
                             continue;
                         }
-                        g_dxl_present_accelerations[g_cmd_args[arg_i]] = g_cmd_args[arg_i + 1];
+                        g_dxl_present_accs[g_cmd_args[arg_i]] = g_cmd_args[arg_i + 1];
                     }
                 }
             }
@@ -425,7 +425,7 @@ void loop()
                     {
                         continue;
                     }
-                    g_dxl_present_accelerations[dxl_i] = g_cmd_args[0];
+                    g_dxl_present_accs[dxl_i] = g_cmd_args[0];
                 }
             }
             break;
@@ -474,12 +474,12 @@ void loop()
             }
             if (g_exists_protocols[1])
             {
-                dxl.writeControlTableItem(MOVING_SPEED, dxl_i, g_dxl_present_velocities[dxl_i]);
+                dxl.writeControlTableItem(MOVING_SPEED, dxl_i, g_dxl_present_vels[dxl_i]);
             }
             else
             {
-                dxl.writeControlTableItem(PROFILE_VELOCITY, dxl_i, g_dxl_present_velocities[dxl_i]);
-                dxl.writeControlTableItem(PROFILE_ACCELERATION, dxl_i, g_dxl_present_accelerations[dxl_i]);
+                dxl.writeControlTableItem(PROFILE_VELOCITY, dxl_i, g_dxl_present_vels[dxl_i]);
+                dxl.writeControlTableItem(PROFILE_ACCELERATION, dxl_i, g_dxl_present_accs[dxl_i]);
             }
         }
         for (int dxl_i = 1; dxl_i <= DXL_MAX_CNT; dxl_i++)
@@ -488,7 +488,7 @@ void loop()
             {
                 continue;
             }
-            dxl.setGoalPosition(dxl_i, g_dxl_pos[dxl_i]);
+            dxl.setGoalPosition(dxl_i, g_dxl_target_pos[dxl_i]);
         }
     }
     else
@@ -499,7 +499,7 @@ void loop()
             {
                 continue;
             }
-            g_dxl_pos[dxl_i] = constrain(uint16_t(dxl.getPresentPosition(dxl_i)), DXL_MIN_POSITION_VALUE, DXL_MAX_POSITION_VALUE);
+            g_dxl_target_pos[dxl_i] = constrain(uint16_t(dxl.getPresentPosition(dxl_i)), DXL_MIN_POSITION_VALUE, DXL_MAX_POSITION_VALUE);
         }
     }
     g_cmd_word = '\0';
