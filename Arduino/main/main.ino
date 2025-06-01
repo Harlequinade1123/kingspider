@@ -16,7 +16,7 @@
 #define USB_SERIAL Serial
 #define BT_SERIAL  Serial2
 
-const uint8_t  DXL_MAX_CNT       = 18;   // モータの数
+const uint8_t  DXL_MAX_CNT       = 255;   // モータの数
 const unsigned long USB_BUADRATE = 57600;   // USBのボーレート
 const unsigned long BT_BUADRATE  = 57600;   // Bluetoothデバイスのボーレート
 const unsigned long DXL_BUADRATE = 1000000; // Dynamixelのボーレート
@@ -42,14 +42,14 @@ uint16_t DXL_MAX_POSITION_VALUE2 = 4095; // モータの最大値
 uint16_t DXL_MIN_POSITION_VALUE2 = 0;    // モータの最小値
 
 // [e]コマンド時のDynamixelの目標位置
-uint16_t g_dxl_e_pos[19];
+uint16_t g_dxl_e_pos[256];
 uint16_t g_dxl_e_pos1[19] = { 512, 512, 512, 819, 205, 512, 512, 512, 512, 205, 819, 512, 512, 512, 512, 205, 819, 512, 512 };
 uint16_t g_dxl_e_pos2[19] = { 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048 };
 
-uint16_t g_dxl_present_velocities[19];    // Dynamixelの速度
-uint16_t g_dxl_present_accelerations[19]; // Dynamixelの加速度
-uint16_t g_dxl_pos[19];                   // Dynamixelの目標位置
-bool     g_dxl_is_connected[19];          // Dynamixelが接続されているかどうか
+uint16_t g_dxl_present_velocities[256];    // Dynamixelの速度
+uint16_t g_dxl_present_accelerations[256]; // Dynamixelの加速度
+uint16_t g_dxl_pos[256];                   // Dynamixelの目標位置
+bool     g_dxl_is_connected[256];          // Dynamixelが接続されているかどうか
 
 //通信プロトコル 1.0 or 2.0 のDynamixelが存在するか
 bool g_exists_protocols[3] = { false, false, false };
@@ -57,7 +57,7 @@ bool g_exists_protocols[3] = { false, false, false };
 bool     g_torque_is_on = false; // Dynamixelがトルクオンかどうか
 String   g_read_line    = "";    // シリアル通信で受け取るコマンド
 char     g_cmd_word     = '\0';  // コマンドのキーワード
-uint16_t g_cmd_args[128];        // コマンドの引数
+uint16_t g_cmd_args[512];        // コマンドの引数
 
 // Dynamixel2Arduinoクラスのインスタンス化
 Dynamixel2Arduino dxl(DXL_SERIAL, DXL_DIR_PIN);
@@ -170,12 +170,28 @@ void setup()
         {
             continue;
         }
-        if (g_exists_protocols[1]) g_dxl_e_pos[dxl_i] = g_dxl_e_pos1[dxl_i];
-        else                       g_dxl_e_pos[dxl_i] = g_dxl_e_pos2[dxl_i];
         g_dxl_present_velocities[dxl_i]    = DXL_INIT_VELOCITY;
         g_dxl_present_accelerations[dxl_i] = DXL_INIT_ACCELERATION;
         g_dxl_pos[dxl_i]                   = DXL_INIT_POSITION;
+        g_dxl_e_pos[dxl_i]                 = DXL_INIT_POSITION;
         g_dxl_is_connected[dxl_i]          = false;
+    }
+
+    if (g_exists_protocols[1])
+    {
+        int dxl_cnt = sizeof(g_dxl_e_pos1) / sizeof(g_dxl_e_pos1[0]);
+        for (int dxl_i = 1; dxl_i < dxl_cnt; dxl_i++)
+        {
+            g_dxl_pos[dxl_i] = g_dxl_e_pos1[dxl_i];
+        }
+    }
+    else
+    {
+        int dxl_cnt = sizeof(g_dxl_e_pos2) / sizeof(g_dxl_e_pos2[0]);
+        for (int dxl_i = 1; dxl_i < dxl_cnt; dxl_i++)
+        {
+            g_dxl_pos[dxl_i] = g_dxl_e_pos2[dxl_i];
+        }
     }
 
     // 接続されたDynamixelに対して初期設定を行い現在角度の表示する
