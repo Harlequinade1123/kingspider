@@ -111,7 +111,7 @@ void setup()
     dxl.begin(DXL_BUADRATE);
 
     // 通信プロトコルの推定
-    for(int8_t protocol = 1; protocol < 3; protocol++)
+    for (int8_t protocol = 1; protocol < 3; protocol++)
     {
         dxl.setPortProtocolVersion((float)protocol);
         for (int dxl_i = 1; dxl_i <= DXL_MAX_CNT; dxl_i++)
